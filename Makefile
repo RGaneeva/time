@@ -13,13 +13,10 @@ GRN			=	\033[1;32m
 NOCOL		=	\033[0m
 HEADER	=	-I $I 
 FLAGS		=	-Wall -Wextra -Werror -std=c++98
-start:
-	@[ -f "minishell" ] || echo -e -n "$(GRN)[Compiling]: ["
-	@make -s all
 
-all:			$(NAME)
+all: $(NAME)
 
-$(NAME):		$(OBJS)
+$(NAME): start $(OBJS) 
 	@echo -e "$(GRN)]100% ==> Success!$(NOCOL)"
 	@$(COMP)
 
@@ -27,6 +24,9 @@ $O%.o: 			$S%.cpp
 	@[ -d $(O) ] || mkdir -p $(O)
 	@echo -e -n "$(GRN)#####$(NOCOL)"
 	@$(COMPO)
+
+start:
+	@[ -f "ircserv" ] || echo -e -n "$(GRN)[Compiling]: ["
 
 clean:
 	@rm -rf $(O)
