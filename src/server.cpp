@@ -17,7 +17,7 @@ m_event_list(),m_receive_buf(),m_sock_state()
 		ERR("socket: %s", strerror(errno));
 		return;
 	}
-    // Это нужно чтобы сразу можно было пересоздат сервер на нужном адресе.
+    // Это нужно чтобы сразу можно было пересоздать сервер на нужном адресе.
 	m_sock_state = INITIALIZED;
 	m_sock_reuse = 1;
 	setsockopt(m_sock, SOL_SOCKET, SO_REUSEADDR, &m_sock_reuse,
@@ -173,7 +173,7 @@ void Server::onRead(struct kevent& event)
 	cout << endl;
 	DEBUG("%s", m_receive_buf);
     // Отправляю ответ.
-    string file = "Hello\r\n";
+    string file = ":server 376 ->\r\n";
 	int bytes_sent = send(event.ident, file.c_str(), file.size(), 0);
 	event.flags |= EV_EOF;
 }
