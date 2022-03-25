@@ -13,7 +13,8 @@
 #include <fstream>
 #include "log.hpp"
 #include <iostream>
-
+#include <vector>
+using namespace std;
 class Server
 {
   public:
@@ -24,6 +25,8 @@ class Server
     int onClientConnect(struct kevent& event);
     int onClientDisconnect(struct kevent& event);
     void startServer();
+    void parsBuffer(string str);
+    void cmdNICK(string str, int n);
   private:
     int listen();
     int bind();
@@ -38,6 +41,7 @@ class Server
     struct kevent m_event_subs;
     struct kevent m_event_list[32];
     char m_receive_buf[1024];
+    vector<string> users;
     enum SocketState 
     {
       INITIALIZED,

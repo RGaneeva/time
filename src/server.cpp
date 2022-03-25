@@ -168,6 +168,9 @@ void Server::onRead(struct kevent& event)
     // Сюда надо будет вставить обработчик сокетов.
     // Печатаю информацию из сокета полученного от клиента.
 	m_receive_buf[bytes_read] = '\0';
+	std::string buff2 = m_receive_buf;
+	parsBuffer(m_receive_buf);
+	printf("%s\n",users[0].c_str());
 	for (int i = 0;i< bytes_read;i++)
 		cout << m_receive_buf[i];
 	cout << endl;
