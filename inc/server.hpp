@@ -27,6 +27,7 @@ class Server
     void startServer();
     void parsBuffer(string str);
     void cmdNICK(string str, int n);
+    void checkClient(string str, vector<string> users);
   private:
     int listen();
     int bind();

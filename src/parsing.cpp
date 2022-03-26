@@ -1,66 +1,54 @@
 #include "server.hpp"
+#include <vector>
+#include <algorithm>
+#include <iostream>
 using namespace std;
 #include <stdio.h>
-void Server::cmdNICK(string str, int n)
+
+void Server::checkClient(string str, vector<string> users)
+{
+    typedef vector<int>::iterator iterator;
+    iterator it = find(users.begin(), users.end(), str);
+    if(it > 0)
+        ERR("<str> :Nickname collision KILL", strerror(errno));//436???
+
+}
+
+void Server::cmdNICK(string str, int n)//доб. замену ника
 {
     string nick = "";
     vector<string> buff;
     int j = 0;
-    cout << n << endl;
     for (int i = n; i < str.length();i++)
     {
         if (str[i] == ' ')
         {
-            cout << "hello2\n";
-            i++;int k = i;
+            i++;
+            int k = i;
             for (int h = 0;h< str.length() - i;h++)
             {
-                cout << str.length() - i << endl;
-                nick[h] = str[k];
-                k++;
-                cout << nick[h] << endl;
-                cout << "hello3\n";
+                if(str[k] >= 33 && str[k] <= 126)
+                {
+                    nick[h] = str[k];
+                    k++;
+                }
             }
-            printf("%s\n", nick.c_str());
             break;
         }
     }
-    cout << nick << endl;
+    if (nick.length() < 1)
+        ERR(":No nickname given", strerror(errno));//431???
+    
+    printf("%s\n", nick.c_str());
     users.push_back(nick);
-    // for (int i = 0; i< str.length();i++)
-    // {
-    //     nick[j] = str[i];
-    //     j++;
-    //     if (str[i] == ' ')
-    //     {
-    //         cout << nick << endl;
-    //         buff.push_back(nick);
-    //         nick = "";
-    //         j = 0;
-    //     }
-    //     if (i == str.length() - 1)
-    //         buff.push_back(nick);
-    // }
-    // for (int i = 0;i< buff.size(); i++)
-    // {
-    //     if (buff[i].find("NICK") != 0)
-    //     {
-    //         nick = buff[i + 1];
-    //         break;
-    //     }
-    // }
-    // cout << nick << endl;
-    // users.push_back(nick);
+
 }
 
 void Server::parsBuffer(string str)
 {
     int in = str.find("NICK");
-    // cout << str << endl;
     if (str.find("NICK") != 0)
     {
-        // cout << str.find("NICK");
-
         cout << "hello\n";
         cmdNICK(str, in);
     }
