@@ -4,17 +4,51 @@
 #include <iostream>
 using namespace std;
 #include <stdio.h>
-
-void Server::checkClient(string str, vector<string> users)
+#include <cstring>
+int Server::Find(string &str)
 {
-    typedef vector<int>::iterator iterator;
-    iterator it = find(users.begin(), users.end(), str);
-    if(it > 0)
-        ERR("<str> :Nickname collision KILL", strerror(errno));//436???
-
+    int ravno = 0;
+    for (int i = 0;i<users.size();i++)
+    {
+        if (users[i].length() >= strlen(str.c_str()))
+        {
+            for (int j =0;j<strlen(str.c_str());j++)
+            {
+                if (users[i][j] == str[j])
+                    ravno++;
+            }
+            if (ravno == strlen(str.c_str()))
+                return 1;
+            ravno = 0;
+        }
+        else
+        {
+            for (int j =0;j<strlen(users[i].c_str());j++)
+            {
+                if (users[i][j] == str[j])
+                    ravno++;
+            }
+            if (ravno == strlen(str.c_str()))
+                return 1;
+            ravno = 0;
+        }
+    }
+    return 0;
 }
 
-void Server::cmdNICK(string str, int n)//доб. замену ника
+int Server::checkClient(string str)
+{
+    int k = Find(str);
+    if (k == 1)
+    {
+        printf("<%s> :Nickname collision KILL\n",str.c_str());//436???
+        return 1;
+    }
+    else
+        return 0;
+}
+
+int Server::cmdNICK(string str, int n)//доб. замену ника
 {
     string nick = "";
     vector<string> buff;
@@ -36,20 +70,26 @@ void Server::cmdNICK(string str, int n)//доб. замену ника
             break;
         }
     }
+    printf("%s\n", nick.c_str());
     if (nick.length() < 1)
         ERR(":No nickname given", strerror(errno));//431???
-    
-    printf("%s\n", nick.c_str());
-    users.push_back(nick);
-
+    if (checkClient(nick) == 0)
+    {
+        users.push_back(nick);
+        return 0;
+    }
+    else
+        return 1;
 }
 
-void Server::parsBuffer(string str)
+int Server::parsBuffer(string str)
 {
     int in = str.find("NICK");
-    if (str.find("NICK") != 0)
+    int ret = 0;
+    if (str.find("NICK") == 0)
     {
-        cout << "hello\n";
-        cmdNICK(str, in);
+        // cout << "hello\n";
+        ret = cmdNICK(str, in);
     }
+    return ret;
 }

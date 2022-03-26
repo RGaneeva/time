@@ -168,16 +168,16 @@ void Server::onRead(struct kevent& event)
     // Сюда надо будет вставить обработчик сокетов.
     // Печатаю информацию из сокета полученного от клиента.
 	m_receive_buf[bytes_read] = '\0';
-	std::string buff2 = m_receive_buf;
-	parsBuffer(m_receive_buf);
-	printf("%s\n",users[0].c_str());
+	int pars = parsBuffer(m_receive_buf);
 	for (int i = 0;i< bytes_read;i++)
 		cout << m_receive_buf[i];
 	cout << endl;
 	DEBUG("%s", m_receive_buf);
     // Отправляю ответ.
-    string file = ":server 376 ->\r\n";
-	int bytes_sent = send(event.ident, file.c_str(), file.size(), 0);
+	if (pars == 0)
+		sendAnswer(event, SUCCESSCONNECT);
+	else
+		sendAnswer(event, ERROR);
 	event.flags |= EV_EOF;
 }
 
@@ -196,3 +196,8 @@ int Server::close()
 }
 
 Server::~Server() {if (m_sock_state == LISTENING) close();}
+
+void Server::sendAnswer(struct kevent &event, string str)
+{
+	int bytes_sent = send(event.ident, str.c_str(), str.size(), 0);
+}
