@@ -15,7 +15,7 @@
 #include <iostream>
 #include <vector>
 using namespace std;
-#define ERROR ":server 436 ->\r\n"
+#define ERROR ": 433 Nickname is already in use\r\n"
 #define SUCCESSCONNECT ":server 376 ->\r\n"
 
 class Server
@@ -28,8 +28,8 @@ class Server
     int onClientConnect(struct kevent& event);
     int onClientDisconnect(struct kevent& event);
     void startServer();
-    int parsBuffer(string str);
-    int cmdNICK(string str, int n);
+    int parsBuffer(string str, struct kevent &event);
+    int cmdNICK(string str, int n, struct kevent &event);
     int checkClient(string str);
     int Find(string &str);
     void sendAnswer(struct kevent &event, string str);
@@ -48,6 +48,7 @@ class Server
     struct kevent m_event_list[32];
     char m_receive_buf[1024];
     vector<string> users;
+    vector<struct kevent> fds;
     enum SocketState 
     {
       INITIALIZED,
