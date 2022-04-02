@@ -113,13 +113,23 @@ int Server::parsBuffer(string str, struct kevent &event)
     {
         printf("users: %lu\n", users.size());
         printf("fds: %lu\n", fds.size());
+        int i = 0;
         vector<string>::iterator it2 = users.begin();
-        for (vector<struct kevent>::iterator it = fds.begin();it!=fds.end() || it2 != users.end();it++, it2++)
+        vector<struct kevent>::iterator it = fds.begin();
+        printf("fd: %lu\n", event.ident);
+        while (i<users.size())
         {
+            it2 = users.begin();
+            it = fds.begin();
+            for (int j = 0;j<users.size();j++)
+                printf("vector: %s\n", users[j].c_str());
         	if (it->ident == event.ident)
         	{
-                printf("users: %lu\n", users.size());
-                printf("fds: %lu\n", fds.size());
+                printf("users size: %lu\n", users.size());
+                printf("fds size: %lu\n", fds.size());
+                printf("%s\n", it2->c_str());
+                printf("%lu\n", it->ident);
+                printf("i: %d\n", i);
                 if (users.size() == 1)
                 {
                     users.clear();
@@ -127,7 +137,10 @@ int Server::parsBuffer(string str, struct kevent &event)
                     break;
                 }
                 else
+                {
                     users.erase(it2);
+                    printf("%s\n", it2->c_str());
+                }
                 if (fds.size() == 1)
                 {
                     users.clear();
@@ -135,9 +148,12 @@ int Server::parsBuffer(string str, struct kevent &event)
                     break;
                 }
                 else
+                {
         		    fds.erase(it);
+                    printf("%lu\n", it->ident);
+                }
         	}
-        	
+        	i++;it++;it2++;
         }
         onClientDisconnect(event);
     }
