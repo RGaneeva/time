@@ -26,6 +26,29 @@ int Server::Find(string &str)
     return 0;
 }
 
+int Server::Find(string &str, string str2)
+{
+    int res = -1;int ravno = 0;
+    int len1 = strlen(str.c_str());
+    int len2 = strlen(str2.c_str());
+    if (len1 >= len2)
+    {
+        for (int i = 0;i<len2;i++)
+        {
+            if (str[i] == str2[i])
+                ravno++;
+            else
+                ravno = 0;
+        }
+        if (ravno == len2)
+        {
+            res = 0;
+            return res;
+        }
+    }
+    return res;
+}
+
 int Server::checkClient(string str)
 {
     int k = Find(str);
@@ -77,32 +100,55 @@ int Server::cmdNICK(string str, int n, struct kevent &event)//доб. замен
 int Server::parsBuffer(string str, struct kevent &event)
 {
     int in = str.find("NICK");
+    printf("%d\n", in);
     int ret = 0;
-    if (str.find("NICK") >= 0)
+    if (Find(str, "NICK") == 0)
     {
         // cout << "hello\n";
         ret = cmdNICK(str, in, event);
     }
-    if (str.find("PING") == 0)
+    if (Find(str, "PING") == 0)
         sendAnswer(event,"PONG 10.21.21.52");
-    // if (str.find("QUIT") == 0)
-    // {
-    //     vector<string>::iterator it2 = users.begin();
-    //     for (vector<struct kevent>::iterator it = fds.begin();it!=fds.end();it++)
-    //     {
-    //     	if (it->ident == event.ident)
-    //     	{
-    //             if (users.size() == 1 || users.size() == 0)
-    //                 users.clear();
-    //             else
-    //                 users.erase(it2);
-    //             if (fds.size() == 1 || fds.size() == 0)
-    //                 fds.clear();
-    //             else
-    //     		    fds.erase(it);
-    //     	}
-    //     	it2++;
-    //     }
-    // }
+    if (Find(str, "QUIT") == 0)
+    {
+        printf("users: %lu\n", users.size());
+        printf("fds: %lu\n", fds.size());
+        vector<string>::iterator it2 = users.begin();
+        for (vector<struct kevent>::iterator it = fds.begin();it!=fds.end() || it2 != users.end();it++, it2++)
+        {
+        	if (it->ident == event.ident)
+        	{
+                printf("users: %lu\n", users.size());
+                printf("fds: %lu\n", fds.size());
+                if (users.size() == 1)
+                {
+                    users.clear();
+                    fds.clear();
+                    break;
+                }
+                else
+                    users.erase(it2);
+                if (fds.size() == 1)
+                {
+                    users.clear();
+                    fds.clear();
+                    break;
+                }
+                else
+        		    fds.erase(it);
+        	}
+        	
+        }
+        onClientDisconnect(event);
+    }
+    if (Find(str,"LIST") == 0)
+    {
+        printf("users: %lu\n", users.size());
+        printf("fds: %lu\n", fds.size());
+        for (int i = 0; i<users.size();i++)
+            printf("%s\n", users[i].c_str());
+        for (int i = 0;i<fds.size();i++)
+            printf("%lu\n", fds[i].ident);
+    }
     return ret;
 }

@@ -187,7 +187,8 @@ void Server::onRead(struct kevent& event)
 	else
 	{
 		sendAnswer(event, ERROR);
-		// onClientDisconnect(event);
+		// sendAnswer(event, ": 451 :You have not registered\t\n");
+		onClientDisconnect(event);
 	}
 	event.flags |= EV_EOF;
 }

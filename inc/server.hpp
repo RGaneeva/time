@@ -32,6 +32,7 @@ class Server
     int cmdNICK(string str, int n, struct kevent &event);
     int checkClient(string str);
     int Find(string &str);
+    int Find(string &str, string str2);
     void sendAnswer(struct kevent &event, string str);
   private:
     int listen();
