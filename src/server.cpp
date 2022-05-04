@@ -168,10 +168,10 @@ void Server::onRead(struct kevent& event)
     // Сюда надо будет вставить обработчик сокетов.
     // Печатаю информацию из сокета полученного от клиента.
 	m_receive_buf[bytes_read] = '\0';
-	int pars = parsBuffer(m_receive_buf, event);
+	sockstr = m_receive_buf;
+	int pars = parsBuffer(sockstr, event);
 	cout << "-------------------------------\n";
-	for (int i = 0;i< bytes_read;i++)
-		cout << m_receive_buf[i];
+	cout << sockstr;
 	cout << "-------------------------------"<< endl;
 	DEBUG("%s", m_receive_buf);
     // Отправляю ответ.
@@ -180,14 +180,14 @@ void Server::onRead(struct kevent& event)
 		sendAnswer(event, SUCCESSCONNECT);
 		cout << "-------------------------------\n";
 		cout << "users online: " << users.size() << endl;
-		for (int i = 0;i<users.size();i++)
-			printf("%s\n",users[i].c_str());
+		for (list<string>::iterator i = users.begin();i!= users.end();i++)
+			printf("%s\n", i->c_str());
 		cout << "-------------------------------\n";
 	}
 	else
 	{
 		sendAnswer(event, ERROR);
-		// sendAnswer(event, ": 451 :You have not registered\t\n");
+		sendAnswer(event, ":server 451 :You have not registered\t\n");
 		onClientDisconnect(event);
 	}
 	event.flags |= EV_EOF;

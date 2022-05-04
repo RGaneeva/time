@@ -5,24 +5,26 @@
 using namespace std;
 #include <stdio.h>
 #include <cstring>
-int Server::Find(string &str)
+int Server::Find(string *str)
 {
+    printf("len: %lu\n", strlen(str[0].c_str()));
     int ravno = 0;
-    for (int i = 0;i<users.size();i++)
+    for (list<string>::iterator i = users.begin();i!=users.end();i++)
     {
-        if (strlen(users[i].c_str()) >= strlen(str.c_str()))
+        if (strlen(i->c_str()) >= strlen(str[0].c_str()))
         {
-            for (int j =0;j<strlen(str.c_str());j++)
+            for (int j =0;j<strlen(str[0].c_str());j++)
             {
-                if (users[i][j] == str[j])
+                string test = *i;
+                if (test[j] == str[0][j])
                     ravno++;
             }
-
-            if (ravno == strlen(str.c_str()) && strlen(users[i].c_str()) == strlen(str.c_str()))
+            if (ravno == strlen(str[0].c_str()) && strlen(i->c_str()) == strlen(str[0].c_str()))
                 return 1;
             ravno = 0;
         }
     }
+    printf("ravno: %d\n", ravno);
     return 0;
 }
 
@@ -49,22 +51,25 @@ int Server::Find(string &str, string str2)
     return res;
 }
 
-int Server::checkClient(string str)
+int Server::checkClient(string *str)
 {
     int k = Find(str);
     if (k == 1)
     {
-        printf("<%s> :Nickname is already in use\n",str.c_str());//436???
+        printf("<%s> :Nickname is already in use\n",str[0].c_str());//436???
         return 1;
     }
     else
         return 0;
 }
 
-int Server::cmdNICK(string str, int n, struct kevent &event)//доб. замену ника
+int Server::cmdNICK(string &str, int n, struct kevent &event)//доб. замену ника
 {
-    string nick = "";
-    vector<string> buff;
+    string *nick = new string;
+    // string nick(str.substr(str.find_first_of(' ') + 1));
+    // size_t found = nick.find('\n');
+    // if (found > 0)
+    //     nick.erase(found);
     int j = 0;
     for (int i = n; i < str.length();i++)
     {
@@ -76,20 +81,20 @@ int Server::cmdNICK(string str, int n, struct kevent &event)//доб. замен
             {
                 if(str[k] >= 33 && str[k] <= 126)
                 {
-                    nick[h] = str[k];
+                    nick[0][h] = str[k];
                     k++;
                 }
             }
             break;
         }
     }
-    printf("%s\n", nick.c_str());
-    if (nick.length() < 1)
-        ERR(":No nickname given", strerror(errno));//431???
+    // printf("%s\n", nick.c_str());
+    // if (nick.length() < 1)
+    //     ERR(":No nickname given", strerror(errno));//431???
     if (checkClient(nick) == 0)
     {
-        printf("check: %s\n", nick.c_str());
-        users.push_back(nick);
+        printf("check: %s\n", nick[0].c_str());
+        users.push_back(nick[0]);
         fds.push_back(event);
         return 0;
     }
@@ -97,49 +102,45 @@ int Server::cmdNICK(string str, int n, struct kevent &event)//доб. замен
         return 1;
 }
 
-int Server::parsBuffer(string str, struct kevent &event)
+int Server::parsBuffer(string &str, struct kevent &event)
 {
     int in = str.find("NICK");
     printf("%d\n", in);
     int ret = 0;
-    if (Find(str, "NICK") == 0)
+    if (str.find("NICK") != string::npos)
     {
         // cout << "hello\n";
         ret = cmdNICK(str, in, event);
     }
     if (Find(str, "PING") == 0)
-        sendAnswer(event,"PONG 10.21.21.52");
+        sendAnswer(event,"PONG 10.21.32.116");
     if (Find(str, "QUIT") == 0)
     {
-        printf("users: %lu\n", users.size());
-        printf("fds: %lu\n", fds.size());
-        int i = 0;
-        vector<string>::iterator it2 = users.begin();
-        vector<struct kevent>::iterator it = fds.begin();
-        printf("fd: %lu\n", event.ident);
-        while (i<users.size())
+        // printf("users: %lu\n", users.size());
+        // printf("fds: %lu\n", fds.size());
+        // list<string>::iterator it2 = users.begin();
+        // for (list<struct kevent>::iterator it = fds.begin();it!=fds.end() || it2!=users.end();)
+        for (list<struct kevent>::iterator it = fds.begin();it!=fds.end() || it2!=users.end();it++, it2++)
         {
-            it2 = users.begin();
-            it = fds.begin();
-            for (int j = 0;j<users.size();j++)
-                printf("vector: %s\n", users[j].c_str());
+            // for(int i=0;i<users.size();i++)
+            //     printf("vector: %s\n", users[i].c_str());
         	if (it->ident == event.ident)
         	{
-                printf("users size: %lu\n", users.size());
-                printf("fds size: %lu\n", fds.size());
-                printf("%s\n", it2->c_str());
-                printf("%lu\n", it->ident);
-                printf("i: %d\n", i);
+                // printf("users: %lu\n", users.size());
+                // printf("fds: %lu\n", fds.size());
+                // printf("in_users: %s\n", it2->c_str());
+                // printf("in_fds: %lu\n", it->ident);
                 if (users.size() == 1)
                 {
+                    // printf("users_size: %lu\n", users.size());
                     users.clear();
                     fds.clear();
                     break;
                 }
                 else
                 {
+                    // printf("users_size_erase: %lu\n", users.size());
                     users.erase(it2);
-                    printf("%s\n", it2->c_str());
                 }
                 if (fds.size() == 1)
                 {
@@ -149,11 +150,14 @@ int Server::parsBuffer(string str, struct kevent &event)
                 }
                 else
                 {
+                    // printf("fds_size_erase: %lu\n", fds.size());
         		    fds.erase(it);
-                    printf("%lu\n", it->ident);
                 }
+                it2 = users.begin();
+                it = fds.begin();
         	}
-        	i++;it++;it2++;
+            
+        	// printf("----------------\n");
         }
         onClientDisconnect(event);
     }
@@ -161,10 +165,10 @@ int Server::parsBuffer(string str, struct kevent &event)
     {
         printf("users: %lu\n", users.size());
         printf("fds: %lu\n", fds.size());
-        for (int i = 0; i<users.size();i++)
-            printf("%s\n", users[i].c_str());
-        for (int i = 0;i<fds.size();i++)
-            printf("%lu\n", fds[i].ident);
+        for (list<string>::iterator i = users.begin(); i!=users.end();i++)
+            printf("%s: %lu\n", i->c_str(), strlen(i->c_str()));
+        for (list<struct kevent>::iterator i = fds.begin();i!=fds.end();i++)
+            printf("%lu\n", i->ident);
     }
     return ret;
 }
