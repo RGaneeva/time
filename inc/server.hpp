@@ -17,7 +17,7 @@
 #include <list>
 using namespace std;
 #define ERROR ":server 433 Nickname is already in use\r\n"
-#define SUCCESSCONNECT ":server 376 ->\r\n"
+#define SUCCESSCONNECT ":server 376 You\r\n"
 
 class Server
 {
@@ -35,6 +35,8 @@ class Server
     int Find(string *str);
     int Find(string &str, string str2);
     void sendAnswer(struct kevent &event, string str);
+    void cmdQUIT(struct kevent &event);
+    void cmdPRIVMSG(string &str, struct kevent &e);
   private:
     int listen();
     int bind();

@@ -7,7 +7,7 @@ using namespace std;
 #include <cstring>
 int Server::Find(string *str)
 {
-    printf("len: %lu\n", strlen(str[0].c_str()));
+    // printf("len: %lu\n", strlen(str[0].c_str()));
     int ravno = 0;
     for (list<string>::iterator i = users.begin();i!=users.end();i++)
     {
@@ -24,7 +24,7 @@ int Server::Find(string *str)
             ravno = 0;
         }
     }
-    printf("ravno: %d\n", ravno);
+    // printf("ravno: %d\n", ravno);
     return 0;
 }
 
@@ -101,11 +101,99 @@ int Server::cmdNICK(string &str, int n, struct kevent &event)//доб. заме�
     else
         return 1;
 }
-
+void Server::cmdQUIT(struct kevent &event)
+{
+    list<string>::iterator it2 = users.begin();
+    for (list<struct kevent>::iterator it = fds.begin();it!=fds.end() || it2!=users.end();it++, it2++)
+    {
+        if (it->ident == event.ident)
+        {
+            if (users.size() == 1)
+            {
+                users.clear();
+                fds.clear();
+                break;
+            }
+            else
+                users.erase(it2);
+            if (fds.size() == 1)
+            {
+                users.clear();
+                fds.clear();
+                break;
+            }
+            else
+                fds.erase(it);
+            it2 = users.begin();
+            it = fds.begin();
+        }
+    }
+    onClientDisconnect(event);
+}
+void Server::cmdPRIVMSG(string &str, struct kevent &e)
+{
+    int space = str.find(' ');
+    int m = str.find(':');
+    string nick = "";
+    string nick2 = "";
+    string message = "";
+    list<struct kevent>::iterator it2 = fds.begin();
+    list<string>::iterator it = users.begin();
+    int l = 0;
+    for (int i = space + 1;str[i] != ' ';i++,l++)
+    {
+        nick[l] = str[i];
+    }
+    printf("nick: %s\n", nick.c_str());
+    for (int i = m;i<str.size();i++)
+        message+=str[i];
+    int j = 0;
+    for (list<string>::iterator i = users.begin();i != users.end();i++)
+    {
+        string str = *i;
+        int check = 0;
+        printf("str: %s\n", str.c_str());
+        if (strlen(str.c_str()) == strlen(nick.c_str()))
+            for (int g=0;g<strlen(str.c_str());g++)
+                if (str[g] == nick[g])
+                    check++;
+        if (check == strlen(str.c_str()))
+            break;
+        j++;
+    }
+    printf("j: %d\n", j);
+    struct kevent event;
+    for (int k = 0;k<=j;it2++,k++)
+    {
+        if (k==j)
+            event = *it2;
+    }
+    printf("%lu\n", event.ident);
+    int a = 0;
+    for (list<struct kevent>::iterator i = fds.begin();i != fds.end();i++)
+    {
+        if (i->ident == e.ident)
+            break;
+        a++;
+    }
+    printf("a: %d\n", a);
+    for (int k = 0;k<users.size();it++,k++)
+    {
+        string str = *it;
+        printf("str2: %s\n", str.c_str());
+        if (k==a)
+        {
+            for (int n = 0;n<strlen(str.c_str());n++)
+                nick2[n] = str[n];
+            // nick2 = str;
+        }    
+    }
+    printf("nick2: %s\n", nick2.c_str());
+    sendAnswer(event, ":server 301 alex " + message);
+}
 int Server::parsBuffer(string &str, struct kevent &event)
 {
     int in = str.find("NICK");
-    printf("%d\n", in);
     int ret = 0;
     if (str.find("NICK") != string::npos)
     {
@@ -115,52 +203,9 @@ int Server::parsBuffer(string &str, struct kevent &event)
     if (Find(str, "PING") == 0)
         sendAnswer(event,"PONG 10.21.32.116");
     if (Find(str, "QUIT") == 0)
-    {
-        // printf("users: %lu\n", users.size());
-        // printf("fds: %lu\n", fds.size());
-        // list<string>::iterator it2 = users.begin();
-        // for (list<struct kevent>::iterator it = fds.begin();it!=fds.end() || it2!=users.end();)
-        for (list<struct kevent>::iterator it = fds.begin();it!=fds.end() || it2!=users.end();it++, it2++)
-        {
-            // for(int i=0;i<users.size();i++)
-            //     printf("vector: %s\n", users[i].c_str());
-        	if (it->ident == event.ident)
-        	{
-                // printf("users: %lu\n", users.size());
-                // printf("fds: %lu\n", fds.size());
-                // printf("in_users: %s\n", it2->c_str());
-                // printf("in_fds: %lu\n", it->ident);
-                if (users.size() == 1)
-                {
-                    // printf("users_size: %lu\n", users.size());
-                    users.clear();
-                    fds.clear();
-                    break;
-                }
-                else
-                {
-                    // printf("users_size_erase: %lu\n", users.size());
-                    users.erase(it2);
-                }
-                if (fds.size() == 1)
-                {
-                    users.clear();
-                    fds.clear();
-                    break;
-                }
-                else
-                {
-                    // printf("fds_size_erase: %lu\n", fds.size());
-        		    fds.erase(it);
-                }
-                it2 = users.begin();
-                it = fds.begin();
-        	}
-            
-        	// printf("----------------\n");
-        }
-        onClientDisconnect(event);
-    }
+        cmdQUIT(event);
+    if (Find(str,"PRIVMSG") == 0)
+        cmdPRIVMSG(str, event);
     if (Find(str,"LIST") == 0)
     {
         printf("users: %lu\n", users.size());
