@@ -2,8 +2,8 @@
 #include <iostream>
 using namespace std;
 // Основной конструктор класса, в качестве параметров принимает ip, port, и максимальную длину очереди ожидающих соединений.
-Server::Server(const char *addr, int port, int backlog) :
-m_address(),m_sock(),m_backlog(backlog),
+Server::Server(const char *addr, int port,string pass, int backlog) :
+m_address(),m_sock(),m_backlog(backlog),serverpassword(pass),
 m_sock_reuse(1),m_kqueue(),m_event_subs(),
 m_event_list(),m_receive_buf(),m_sock_state()
 {
@@ -174,22 +174,6 @@ void Server::onRead(struct kevent& event)
 	cout << sockstr;
 	cout << "-------------------------------"<< endl;
 	DEBUG("%s", m_receive_buf);
-    // Отправляю ответ.
-	if (pars == 0)
-	{
-		sendAnswer(event, SUCCESSCONNECT);
-		cout << "-------------------------------\n";
-		cout << "users online: " << users.size() << endl;
-		for (list<string>::iterator i = users.begin();i!= users.end();i++)
-			printf("%s\n", i->c_str());
-		cout << "-------------------------------\n";
-	}
-	else
-	{
-		sendAnswer(event, ERROR);
-		sendAnswer(event, ":server 451 :You have not registered\t\n");
-		onClientDisconnect(event);
-	}
 	event.flags |= EV_EOF;
 }
 

@@ -11,7 +11,6 @@ int main(int arg, char **argv)
         return 0;
     }
     int port = atoi(argv[1]);
-    string pass = argv[2];
-    Server a("10.21.32.106", port,1000);
+    Server a("10.21.32.116", port,argv[2],1000);
     a.startServer();
 }

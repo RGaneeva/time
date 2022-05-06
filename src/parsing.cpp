@@ -5,21 +5,21 @@
 using namespace std;
 #include <stdio.h>
 #include <cstring>
-int Server::Find(string *str)
+int Server::Find(string str)
 {
     // printf("len: %lu\n", strlen(str[0].c_str()));
     int ravno = 0;
     for (list<string>::iterator i = users.begin();i!=users.end();i++)
     {
-        if (strlen(i->c_str()) >= strlen(str[0].c_str()))
+        if (strlen(i->c_str()) >= strlen(str.c_str()))
         {
-            for (int j =0;j<strlen(str[0].c_str());j++)
+            for (int j =0;j<strlen(str.c_str());j++)
             {
                 string test = *i;
-                if (test[j] == str[0][j])
+                if (test[j] == str[j])
                     ravno++;
             }
-            if (ravno == strlen(str[0].c_str()) && strlen(i->c_str()) == strlen(str[0].c_str()))
+            if (ravno == strlen(str.c_str()) && strlen(i->c_str()) == strlen(str.c_str()))
                 return 1;
             ravno = 0;
         }
@@ -51,12 +51,12 @@ int Server::Find(string &str, string str2)
     return res;
 }
 
-int Server::checkClient(string *str)
+int Server::checkClient(string str)
 {
     int k = Find(str);
     if (k == 1)
     {
-        printf("<%s> :Nickname is already in use\n",str[0].c_str());//436???
+        printf("<%s> :Nickname is already in use\n",str.c_str());//436???
         return 1;
     }
     else
@@ -65,36 +65,21 @@ int Server::checkClient(string *str)
 
 int Server::cmdNICK(string &str, int n, struct kevent &event)//доб. замену ника
 {
-    string *nick = new string;
-    // string nick(str.substr(str.find_first_of(' ') + 1));
-    // size_t found = nick.find('\n');
-    // if (found > 0)
-    //     nick.erase(found);
-    int j = 0;
-    for (int i = n; i < str.length();i++)
+    string nick(str.substr(n));
+    nick = (nick.substr(nick.find_first_of(' ') + 1));
+    size_t found = nick.find('\n');
+    if (found > 0)
     {
-        if (str[i] == ' ')
-        {
-            i++;
-            int k = i;
-            for (int h = 0;h< str.length() - i;h++)
-            {
-                if(str[k] >= 33 && str[k] <= 126)
-                {
-                    nick[0][h] = str[k];
-                    k++;
-                }
-            }
-            break;
-        }
+        for (int p = 0;p<nick.size();p++)
+            if (nick[p] == '\n'|| nick[p] == '\r')
+                nick.erase(p);
     }
-    // printf("%s\n", nick.c_str());
     // if (nick.length() < 1)
     //     ERR(":No nickname given", strerror(errno));//431???
     if (checkClient(nick) == 0)
     {
-        printf("check: %s\n", nick[0].c_str());
-        users.push_back(nick[0]);
+        printf("check: %s\n", nick.c_str());
+        users.push_back(nick);
         fds.push_back(event);
         return 0;
     }
@@ -189,16 +174,65 @@ void Server::cmdPRIVMSG(string &str, struct kevent &e)
         }    
     }
     printf("nick2: %s\n", nick2.c_str());
-    sendAnswer(event, ":server 301 alex " + message);
+    sendAnswer(event, ":server 301 "+nick2+" " + message);
+}
+int Server::cmdPASS(string &str, struct kevent &e)
+{
+    string pass = str.substr(str.find_first_of(':') + 1);
+    size_t found = pass.find('\n');
+    size_t found2 = pass.find('\r');
+    if (found > 0)
+        pass.erase(found);
+    if (found2 > 0)
+        pass.erase(found2);
+    printf("pass: %s\n", pass.c_str());
+    printf("pass len: %lu\n", strlen(pass.c_str()));
+    if (pass == serverpassword)
+        return 0;
+    else
+    {
+        // sendAnswer(e, ERROR);
+        onClientDisconnect(e);
+        return 1;
+    }
 }
 int Server::parsBuffer(string &str, struct kevent &event)
 {
     int in = str.find("NICK");
     int ret = 0;
+    if (str.find("PASS") != string::npos)
+    {
+        ret = cmdPASS(str, event);
+        printf("ret: %d\n", ret);
+    }
+    if (ret == 1)
+        return ret;
+    if ((str.find("USER") != string::npos) && (str.find("PASS") == string::npos))
+    {
+        onClientDisconnect(event);
+        return 1;
+    }
     if (str.find("NICK") != string::npos)
     {
-        // cout << "hello\n";
         ret = cmdNICK(str, in, event);
+        if (ret == 0)
+        {	
+            string name = "";
+            for (list<string>::iterator i = users.begin();i!=users.end();i++)
+                name = i->c_str();
+            sendAnswer(event, SUCCESSCONNECT + name +"\r\n");
+            cout << "-------------------------------\n";
+            cout << "users online: " << users.size() << endl;
+            for (list<string>::iterator i = users.begin();i!= users.end();i++)
+                printf("%s\n", i->c_str());
+            cout << "-------------------------------\n";
+        }
+        else
+        {
+            sendAnswer(event, ERROR);
+            sendAnswer(event, ":server 451 :You have not registered\r\n");
+            onClientDisconnect(event);
+        }
     }
     if (Find(str, "PING") == 0)
         sendAnswer(event,"PONG 10.21.32.116");

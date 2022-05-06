@@ -17,12 +17,12 @@
 #include <list>
 using namespace std;
 #define ERROR ":server 433 Nickname is already in use\r\n"
-#define SUCCESSCONNECT ":server 376 You\r\n"
+#define SUCCESSCONNECT ":server 376 "
 
 class Server
 {
   public:
-    Server(const char *addr, const int port, int backlog);
+    Server(const char *addr, const int port,string pass, int backlog);
     ~Server();
     void onRead(struct kevent& event);
     void onEOF(struct kevent& event);
@@ -31,12 +31,13 @@ class Server
     void startServer();
     int parsBuffer(string &str, struct kevent &event);
     int cmdNICK(string &str, int n, struct kevent &event);
-    int checkClient(string *str);
-    int Find(string *str);
+    int checkClient(string str);
+    int Find(string str);
     int Find(string &str, string str2);
     void sendAnswer(struct kevent &event, string str);
     void cmdQUIT(struct kevent &event);
     void cmdPRIVMSG(string &str, struct kevent &e);
+    int cmdPASS(string &str, struct kevent &e);
   private:
     int listen();
     int bind();
@@ -54,6 +55,7 @@ class Server
     list<string> users;
     list<struct kevent> fds;
     string sockstr;
+    string serverpassword;
     enum SocketState 
     {
       INITIALIZED,
