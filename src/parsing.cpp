@@ -8,12 +8,12 @@ using namespace std;
 int Server::Find(string str)
 {
     // printf("len: %lu\n", strlen(str[0].c_str()));
-    int ravno = 0;
+    size_t ravno = 0;
     for (list<string>::iterator i = users.begin();i!=users.end();i++)
     {
         if (strlen(i->c_str()) >= strlen(str.c_str()))
         {
-            for (int j =0;j<strlen(str.c_str());j++)
+            for (size_t j =0;j<strlen(str.c_str());j++)
             {
                 string test = *i;
                 if (test[j] == str[j])
@@ -70,7 +70,7 @@ int Server::cmdNICK(string &str, int n, struct kevent &event)//доб. заме�
     size_t found = nick.find('\n');
     if (found > 0)
     {
-        for (int p = 0;p<nick.size();p++)
+        for (unsigned long p = 0;p<nick.size();p++)
             if (nick[p] == '\n'|| nick[p] == '\r')
                 nick.erase(p);
     }
@@ -124,57 +124,51 @@ void Server::cmdPRIVMSG(string &str, struct kevent &e)
     string message = "";
     list<struct kevent>::iterator it2 = fds.begin();
     list<string>::iterator it = users.begin();
-    int l = 0;
-    for (int i = space + 1;str[i] != ' ';i++,l++)
+    for (int i = space + 1;str[i] != ' ';i++)
     {
-        nick[l] = str[i];
+        nick += str[i];
     }
-    printf("nick: %s\n", nick.c_str());
-    for (int i = m;i<str.size();i++)
+    for (unsigned long i = m;i<str.size();i++)
         message+=str[i];
     int j = 0;
     for (list<string>::iterator i = users.begin();i != users.end();i++)
     {
         string str = *i;
-        int check = 0;
-        printf("str: %s\n", str.c_str());
+        size_t check = 0;
         if (strlen(str.c_str()) == strlen(nick.c_str()))
-            for (int g=0;g<strlen(str.c_str());g++)
+            for (size_t g=0;g<strlen(str.c_str());g++)
                 if (str[g] == nick[g])
                     check++;
         if (check == strlen(str.c_str()))
             break;
         j++;
     }
-    printf("j: %d\n", j);
     struct kevent event;
     for (int k = 0;k<=j;it2++,k++)
     {
         if (k==j)
             event = *it2;
     }
-    printf("%lu\n", event.ident);
-    int a = 0;
+    unsigned long a = 0;
     for (list<struct kevent>::iterator i = fds.begin();i != fds.end();i++)
     {
         if (i->ident == e.ident)
             break;
         a++;
     }
-    printf("a: %d\n", a);
-    for (int k = 0;k<users.size();it++,k++)
+    for (unsigned long k = 0;k<users.size();it++,k++)
     {
         string str = *it;
         printf("str2: %s\n", str.c_str());
         if (k==a)
         {
-            for (int n = 0;n<strlen(str.c_str());n++)
-                nick2[n] = str[n];
+            for (size_t n = 0;n<strlen(str.c_str());n++)
+                nick2 += str[n];
             // nick2 = str;
         }    
     }
-    printf("nick2: %s\n", nick2.c_str());
-    sendAnswer(event, ":server 301 "+nick2+" " + message);
+    string *str2 = new string(":"+nick2+"! PRIVMSG "+nick+" "+ message + "\r\n");
+    sendAnswer(event, str2[0]);
 }
 int Server::cmdPASS(string &str, struct kevent &e)
 {

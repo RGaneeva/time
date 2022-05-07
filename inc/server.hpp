@@ -25,7 +25,7 @@ class Server
     Server(const char *addr, const int port,string pass, int backlog);
     ~Server();
     void onRead(struct kevent& event);
-    void onEOF(struct kevent& event);
+    void onEOF();
     int onClientConnect(struct kevent& event);
     int onClientDisconnect(struct kevent& event);
     void startServer();
@@ -46,7 +46,7 @@ class Server
     int initServer();
     struct sockaddr_in m_address;
     int m_sock_reuse;
-    int m_sock;
+    uintptr_t m_sock;
     int m_backlog;
     int m_kqueue;
     struct kevent m_event_subs;

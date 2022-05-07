@@ -3,9 +3,8 @@
 using namespace std;
 // Основной конструктор класса, в качестве параметров принимает ip, port, и максимальную длину очереди ожидающих соединений.
 Server::Server(const char *addr, int port,string pass, int backlog) :
-m_address(),m_sock(),m_backlog(backlog),serverpassword(pass),
-m_sock_reuse(1),m_kqueue(),m_event_subs(),
-m_event_list(),m_receive_buf(),m_sock_state()
+m_address(),m_sock_reuse(1),m_sock(),
+m_backlog(backlog),m_kqueue(),m_event_subs(),m_event_list(),m_receive_buf(),serverpassword(pass),m_sock_state()
 {
     // Заполняю структуру значениями ip, port и создаю сокет.
 	m_address.sin_family = AF_INET;
@@ -106,7 +105,7 @@ void Server::startServer()
 				if (curr_event.flags & EVFILT_READ) 
 					onRead(curr_event);
 				if (curr_event.flags & EV_EOF)
-					onEOF(curr_event);
+					onEOF();
 			}
 		}
 	}
@@ -169,7 +168,7 @@ void Server::onRead(struct kevent& event)
     // Печатаю информацию из сокета полученного от клиента.
 	m_receive_buf[bytes_read] = '\0';
 	sockstr = m_receive_buf;
-	int pars = parsBuffer(sockstr, event);
+	parsBuffer(sockstr, event);
 	cout << "-------------------------------\n";
 	cout << sockstr;
 	cout << "-------------------------------"<< endl;
@@ -177,7 +176,7 @@ void Server::onRead(struct kevent& event)
 	event.flags |= EV_EOF;
 }
 
-void Server::onEOF(struct kevent& event)
+void Server::onEOF()
 {
 	DEBUG("[0x%016" PRIXPTR "] client eof", event.ident);
 }
@@ -195,5 +194,5 @@ Server::~Server() {if (m_sock_state == LISTENING) close();}
 
 void Server::sendAnswer(struct kevent &event, string str)
 {
-	int bytes_sent = send(event.ident, str.c_str(), str.size(), 0);
+	send(event.ident, str.c_str(), str.size(), 0);
 }
