@@ -245,10 +245,9 @@ void Server::cmdJOIN(string &str, struct kevent &event) //а если неско
         {
             wherefind = wherefind.substr(wherefind.find_first_of(' ') + 1);
             chanName = split(wherefind, ' ');
-            // if (spaceCheck(wherefind) > 0 && spaceCheck(wherefind) < 1)
-            if (spaceCheck(wherefind) > 0)
+            if (spaceCheck(wherefind) > 0 && spaceCheck(wherefind) < 2)
                 passName = wherefind.substr(wherefind.find(' ') + 1);//исправлено - не работает корректно если ввести только одно слово(имя канала)
-            // else
+            // else // что будет, если введут некорректную строку, какая ошибка?
             // {
             //     sendAnswer(event, ":server 403 "+chanName+ ":No such channel\r\n");
             //     return ;
@@ -311,9 +310,9 @@ void Server::cmdJOIN(string &str, struct kevent &event) //а если неско
             //     it->printName();
             // }
 
-            size_t l = 0;//добавить добавление паролей
+            size_t l = 0;//добавить добавление паролей - добавлено
             size_t m = 0;
-            while (l < passName.size())
+            while (l < passName.size())//проверка и добавление паролей
             {
                 if (passName[l] == ',')
                 {
@@ -325,10 +324,11 @@ void Server::cmdJOIN(string &str, struct kevent &event) //а если неско
                 }
                 l++;
             }
-            passNameLast = passName.substr(passName.find(',') + 1);
+            passNameLast = passName.substr(passName.find(',') + 1);//проверка и добавление последнего пароля
             rooms[m].pass = passNameLast;
             for(vector<chatroom>::iterator it = rooms.begin(); it !=rooms.end(); it++)
             {
+                it->printName();
                 it->printPass();
                 cout << "1" << endl;
             }
