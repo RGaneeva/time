@@ -204,6 +204,17 @@ string Server::split(string str, char del)
     return strings[0];
 }
 
+int Server::spaceCheck(string str)
+{
+    int k = 0;
+    for (size_t i = 0;i<str.size();i++)
+    {
+        if (str[i] == ' ')
+            k++;
+    }
+    return k;
+}
+
 int Server::channelNameCheck(string str)
 {
     for (size_t l = 0; l < str.size(); l++)
@@ -218,7 +229,7 @@ int Server::channelNameCheck(string str)
 }
                        
 
-void Server::cmdJOIN(string &str, struct kevent &event) //а если несколько имен каналов в одном сообщении? -да нам нужно это реализовывать
+void Server::cmdJOIN(string &str, struct kevent &event) //а если несколько имен каналов в одном сообщении? - сделано
 {//добавить проверку, был ли этот канал создан ранее, если да - юзер просто юзер, если нет и это новый - юзер - оператор
 //добавить - у юзера не может быть больше 10 каналов
     if(str.size() < 8) //нужно было проверить - проверено
@@ -226,13 +237,23 @@ void Server::cmdJOIN(string &str, struct kevent &event) //а если неско
     else
     {
         string chanName = "";
+        string chanNameLast = "";
         string passName = "";
+        string passNameLast = "";
         string wherefind = str.substr((str.find("JOIN") + 4), (str.size() - 5));
         if ((wherefind.find('#') == 1) || (wherefind.find('&') == 1))
         {
             wherefind = wherefind.substr(wherefind.find_first_of(' ') + 1);
             chanName = split(wherefind, ' ');
-            passName = wherefind.substr((wherefind.find(' ') + 1));//не работает корректно если ввести только одно слово(имя канала)
+            // if (spaceCheck(wherefind) > 0 && spaceCheck(wherefind) < 1)
+            if (spaceCheck(wherefind) > 0)
+                passName = wherefind.substr(wherefind.find(' ') + 1);//исправлено - не работает корректно если ввести только одно слово(имя канала)
+            // else
+            // {
+            //     sendAnswer(event, ":server 403 "+chanName+ ":No such channel\r\n");
+            //     return ;
+            // }    
+            cout << wherefind << " - wherefind name" << endl;
             cout << chanName << " - channel name" << endl;
             cout << passName << " - pass name" << endl;
             size_t j = 0;
@@ -256,66 +277,66 @@ void Server::cmdJOIN(string &str, struct kevent &event) //а если неско
             }
             
             size_t i = 0;
-            while(i < chanName.size())// не проверяет хэштег в наале имени, но выдает ошибку, если запятая в имени
+            while(i < chanName.size())//проверка имен каналов
             {
                 if (chanName[i] == ',')
                 {
-                    string check = split(chanName, ',');
-                    cout << check << " what is here" << endl;
-                    // if(check.size() > 200 || check[0] != '#' || check[0] != '&' || channelNameCheck(check) < 0)
-                    if(check.size() > 200 || channelNameCheck(check) < 0)//!!!!!ЗАКОНЧИЛА ЗДЕСЬ - не правильно проверяет символы в начале
-                    {
-                        sendAnswer(event, ":server 403 :No such channel\r\n");
-                        cout << "error is here too!" << check[0] << endl;
+                    string chanCheck = split(chanName, ',');
+                    if(chanCheck.size() > 200 || (chanCheck[0] != '#' && chanCheck[0] != '&') || channelNameCheck(chanCheck) < 0)
+                    {//некорректно обрабатывает # & в начале - сделано
+                        sendAnswer(event, ":server 403 "+chanCheck+ ":No such channel\r\n");
                         return ;
                     }
-                    else
-                    {
-                        chatroom a(check, "");
-                        rooms.push_back(a);
-                        chanName = chanName.substr(chanName.find(','));
-                        i = 0;
-                        cout << chanName << " checked" << endl;
-                    }
+                    chatroom a(chanCheck, "");
+                    rooms.push_back(a);
+                    chanName = chanName.substr(chanName.find(','));
+                    i = 0;
                 }   
                 i++;    
-            }   
-            chatroom b(chanName.substr(chanName.find(',') + 1), "");
+            }
+            // for(vector<chatroom>::iterator it = rooms.begin(); it !=rooms.end(); it++)//потом удалить - проверка, какие комнаты добавлены 
+            // {
+            //     it->printName();
+            // }
+            chanNameLast = chanName.substr(chanName.find(',') + 1);//проверка и добавление последнего имени канала
+            if(chanNameLast.size() > 200 || (chanNameLast[0] != '#' && chanNameLast[0] != '&') || channelNameCheck(chanNameLast) < 0)
+            {
+                sendAnswer(event, ":server 403 "+chanNameLast+ " :No such channel\r\n");
+                return ;
+            }
+            chatroom b(chanNameLast, "");
             rooms.push_back(b);
+            // for(vector<chatroom>::iterator it = rooms.begin(); it !=rooms.end(); it++)//потом удалить - проверка, какие комнаты добавлены 
+            // {
+            //     it->printName();
+            // }
+
+            size_t l = 0;//добавить добавление паролей
+            size_t m = 0;
+            while (l < passName.size())
+            {
+                if (passName[l] == ',')
+                {
+                    string passCheck = split(passName, ',');
+                    rooms[m].pass = passCheck;
+                    m++;
+                    passName = passName.substr(passName.find(','));
+                    l = 0;
+                }
+                l++;
+            }
+            passNameLast = passName.substr(passName.find(',') + 1);
+            rooms[m].pass = passNameLast;
             for(vector<chatroom>::iterator it = rooms.begin(); it !=rooms.end(); it++)
             {
-                it->printName();
+                it->printPass();
+                cout << "1" << endl;
             }
-            // size_t l = 0;//добавить добавление паролей
-            // while (l < passName.size())
-            // {
-            //     if (chanName[i] == ',')
-            //     {
-            //     }
-            //     i++;
-            // }
-            // for(list<chatroom>::iterator it = rooms.begin(); it !=rooms.end(); it++)
-            // {
-            //     it->printPass();
-            // }
         }
         else
            sendAnswer(event, ":server 403 :No such channel\r\n");
     }
 }
-/*&& (wherefind.find('\r') < 0) && (wherefind.find('\n') < 0 ) && \
-                (wherefind.find(' ') < 0) && (wherefind.find('\0') < 0) && (wherefind.find(',') < 0)*/
-
-            // if (wherefind.find('#') == 1 and wherefind.find(' ') > 0)
-            // {
-            //     chanName = wherefind.substr((wherefind.find_first_of('#') + 1), wherefind.find(' '));
-            //     cout << chanName << " 1" << endl;
-            // }
-            // if (wherefind.find('&') == 1 and wherefind.find(' ') > 0)
-            // {
-            //     chanName = wherefind.substr((wherefind.find_first_of('&') + 1), wherefind.find(' '));
-            //     cout << chanName << " 2" << end
-            // }
 
 int Server::parsBuffer(string &str, struct kevent &event)
 {

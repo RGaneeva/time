@@ -74,6 +74,7 @@ class Server
     string split(string str, char del);
     void cmdJOIN(string &str, struct kevent &event);
     int channelNameCheck(string str);
+    int spaceCheck(string str);
 
   private:
     int listen();
