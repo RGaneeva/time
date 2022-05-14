@@ -25,7 +25,8 @@ class chatroom
     list<string> users;
     string pass;
     string name;
-    chatroom(string Name,string Pass) {name = Name;pass = Pass;}
+    string topic;
+    chatroom(string Name,string Pass) {name = Name;pass = Pass; topic = "";}
     ~chatroom() {}
     void addUser(string nik) {users.push_back(nik);}
     void printUsers()
@@ -75,6 +76,9 @@ class Server
     void cmdJOIN(string &str, struct kevent &event);
     int channelNameCheck(string str);
     int spaceCheck(string str);
+    void chanPassNum(string chanName, string passName, struct kevent &event);
+    string addUserToChan(struct kevent &event);
+    void userAlreadyInChan(string chanCheck, struct kevent &event);
 
   private:
     int listen();

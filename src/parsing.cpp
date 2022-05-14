@@ -164,7 +164,6 @@ void Server::cmdPRIVMSG(string &str, struct kevent &e)
         {
             for (size_t n = 0;n<strlen(str.c_str());n++)
                 nick2 += str[n];
-            // nick2 = str;
         }    
     }
     string *str2 = new string(":"+nick2+"! PRIVMSG "+nick+" "+ message + "\r\n");
@@ -185,7 +184,6 @@ int Server::cmdPASS(string &str, struct kevent &e)
         return 0;
     else
     {
-        // sendAnswer(e, ERROR);
         onClientDisconnect(e);
         return 1;
     }
@@ -227,10 +225,87 @@ int Server::channelNameCheck(string str)
     }
     return 0;
 }
-                       
+
+void Server::chanPassNum(string chanName, string passName, struct kevent &event)
+{
+    size_t j = 0;
+    for (size_t i = 0; i < chanName.size(); i++)
+    {
+        if (chanName[i] == ',')
+            j++;
+    }
+    size_t chan_number = j + 1;
+    size_t k = 0;
+    for (size_t i = 0; i < passName.size(); i++)
+    {
+        if (passName[i] == ',')
+            k++;
+    }
+    size_t pass_number = k + 1;
+    if (pass_number > chan_number)
+    {
+        sendAnswer(event, ":server 464 :Password incorrect\r\n");
+        return ;
+    }
+}
+
+string Server::addUserToChan(struct kevent &event)
+{
+    unsigned long p = 0;
+    for (list<struct kevent>::iterator q = fds.begin(); q != fds.end();q++)
+    {
+        if (q->ident == event.ident)
+            break;
+        p++;
+    }
+    string userToChan = "";
+    list<string>::iterator iter = users.begin();
+    for (unsigned long r = 0;r <= p; iter++, r++)
+    {
+        if (r == p)
+            userToChan += *iter;
+    }
+    rooms[rooms.size()-1].users.push_back(userToChan);
+    return (userToChan);
+}
+
+void Server::userAlreadyInChan(string chanCheck, struct kevent &event)
+{
+    for(vector<chatroom>::iterator iter2 = rooms.begin(); iter2 !=rooms.end(); iter2++)
+    {
+        if(iter2->name == chanCheck)//проверка, если уже есть такой канал
+        {
+            unsigned long p = 0;
+            for (list<struct kevent>::iterator q = fds.begin(); q != fds.end();q++)//поиск текущего пользователя
+            {
+                if (q->ident == event.ident)
+                    break;
+                p++;
+            }
+            string userInChan = "";
+            list<string>::iterator iter = users.begin();
+            for (unsigned long r = 0;r <= p; iter++, r++)
+            {
+                if (r == p)
+                    userInChan += *iter;
+            }
+            for(list<string>::iterator iter3 = iter2->users.begin(); iter3 != iter2->users.end(); iter3++)
+            {//проверка, есть ли пользователь в списке данного канала
+                if(*iter3 == userInChan)
+                {
+                    sendAnswer(event, ":server 443 "+chanCheck+" "+userInChan+" :is already on channel\r\n");
+                    return ;
+                }
+                else
+                    iter2->users.push_back(userInChan);
+            }
+        }
+    }
+}
 
 void Server::cmdJOIN(string &str, struct kevent &event) //а если несколько имен каналов в одном сообщении? - сделано
 {//добавить проверку, был ли этот канал создан ранее, если да - юзер просто юзер, если нет и это новый - юзер - оператор
+// - будем просто проверять при применении команды оператора - юзер в листе по итератору 0 - и есть оператор
 //добавить - у юзера не может быть больше 10 каналов
     if(str.size() < 8) //нужно было проверить - проверено
         sendAnswer(event, ":server 461 JOIN :Not enough parameters\r\n");
@@ -245,42 +320,57 @@ void Server::cmdJOIN(string &str, struct kevent &event) //а если неско
         {
             wherefind = wherefind.substr(wherefind.find_first_of(' ') + 1);
             chanName = split(wherefind, ' ');
+            if (spaceCheck(wherefind) > 2)
+            {
+                sendAnswer(event, ":server 403 "+chanName+ ":No such channel\r\n");
+                return ;
+            } 
             if (spaceCheck(wherefind) > 0 && spaceCheck(wherefind) < 2)
-                passName = wherefind.substr(wherefind.find(' ') + 1);//исправлено - не работает корректно если ввести только одно слово(имя канала)
-            // else // что будет, если введут некорректную строку, какая ошибка?
-            // {
-            //     sendAnswer(event, ":server 403 "+chanName+ ":No such channel\r\n");
-            //     return ;
-            // }    
+                passName = wherefind.substr(wherefind.find(' ') + 1);//исправлено - не работает корректно если ввести только одно слово(имя канала) 
             cout << wherefind << " - wherefind name" << endl;
             cout << chanName << " - channel name" << endl;
             cout << passName << " - pass name" << endl;
-            size_t j = 0;
-            for (size_t i = 0; i < chanName.size(); i++)
-            {
-                if (chanName[i] == ',')
-                    j++;
-            }
-            size_t chan_number = j + 1;
-            size_t k = 0;
-            for (size_t i = 0; i < passName.size(); i++)
-            {
-                if (passName[i] == ',')
-                    k++;
-            }
-            size_t pass_number = k + 1;
-            if (pass_number > chan_number)
-            {
-                sendAnswer(event, ":server 464 :Password incorrect\r\n");
-                return ;
-            }
-            
+            chanPassNum(chanName, passName, event);//проверка чтобы паролей было не больше каналов
             size_t i = 0;
+            string userInChan = "";
             while(i < chanName.size())//проверка имен каналов
             {
                 if (chanName[i] == ',')
                 {
                     string chanCheck = split(chanName, ',');
+                    // userAlreadyInChan(chanCheck, event);
+                    for(vector<chatroom>::iterator iter2 = rooms.begin(); iter2 !=rooms.end(); iter2++)
+                    {
+                        if(iter2->name == chanCheck)//проверка, если уже есть такой канал
+                        {
+                            unsigned long p = 0;
+                            for (list<struct kevent>::iterator q = fds.begin(); q != fds.end();q++)//поиск текущего пользователя
+                            {
+                                if (q->ident == event.ident)
+                                    break;
+                                p++;
+                            }
+                            
+                            list<string>::iterator iter = users.begin();
+                            for (unsigned long r = 0;r <= p; iter++, r++)
+                            {
+                                if (r == p)
+                                    userInChan += *iter;
+                            }
+                            for(list<string>::iterator iter3 = iter2->users.begin(); iter3 != iter2->users.end(); iter3++)
+                            {//проверка, есть ли пользователь в списке данного канала
+                                if(*iter3 == userInChan)
+                                {
+                                    sendAnswer(event, ":server 443 "+chanCheck+" "+userInChan+" :is already on channel\r\n");
+                                    cout << "11111" << endl;
+                                    return ;
+                                }
+                                else
+                                    iter2->users.push_back(userInChan);
+                            }
+                            cout << userInChan << "21" << endl;
+                        }
+                    }
                     if(chanCheck.size() > 200 || (chanCheck[0] != '#' && chanCheck[0] != '&') || channelNameCheck(chanCheck) < 0)
                     {//некорректно обрабатывает # & в начале - сделано
                         sendAnswer(event, ":server 403 "+chanCheck+ ":No such channel\r\n");
@@ -288,16 +378,49 @@ void Server::cmdJOIN(string &str, struct kevent &event) //а если неско
                     }
                     chatroom a(chanCheck, "");
                     rooms.push_back(a);
+                    string userToChan = addUserToChan(event);
+                    if(rooms[rooms.size()-1].topic == "")//дописать ф-ю вывода списка юзеров в данном канале
+                        sendAnswer(event, ":server 331 "+userToChan+" "+chanCheck+ " :No topic is set\r\n");
+                    else
+                        sendAnswer(event, ":server 332 "+userToChan+" "+chanCheck+" :"+rooms[rooms.size()-1].topic+ "\r\n");
                     chanName = chanName.substr(chanName.find(','));
                     i = 0;
                 }   
                 i++;    
             }
-            // for(vector<chatroom>::iterator it = rooms.begin(); it !=rooms.end(); it++)//потом удалить - проверка, какие комнаты добавлены 
-            // {
-            //     it->printName();
-            // }
             chanNameLast = chanName.substr(chanName.find(',') + 1);//проверка и добавление последнего имени канала
+            chanNameLast = split(chanNameLast, '\r');
+            for(vector<chatroom>::iterator iter2 = rooms.begin(); iter2 !=rooms.end(); iter2++)
+            {
+                if(iter2->name == chanNameLast)//проверка, если уже есть такой канал
+                {
+                    unsigned long p = 0;
+                    for (list<struct kevent>::iterator q = fds.begin(); q != fds.end();q++)//поиск текущего пользователя
+                    {
+                        if (q->ident == event.ident)
+                            break;
+                        p++;
+                    }
+                    
+                    list<string>::iterator iter = users.begin();
+                    for (unsigned long r = 0;r <= p; iter++, r++)
+                    {
+                        if (r == p)
+                            userInChan += *iter;
+                    }
+                    for(list<string>::iterator iter3 = iter2->users.begin(); iter3 != iter2->users.end(); iter3++)
+                    {//проверка, есть ли пользователь в списке данного канала
+                        if(*iter3 == userInChan)
+                        {
+                            sendAnswer(event, ":server 443 "+chanNameLast+" "+userInChan+" :is already on channel\r\n");
+                            cout << "22222" << endl;
+                            return ;
+                        }
+                        else
+                            iter2->users.push_back(userInChan);
+                    }
+                }
+            }
             if(chanNameLast.size() > 200 || (chanNameLast[0] != '#' && chanNameLast[0] != '&') || channelNameCheck(chanNameLast) < 0)
             {
                 sendAnswer(event, ":server 403 "+chanNameLast+ " :No such channel\r\n");
@@ -305,11 +428,11 @@ void Server::cmdJOIN(string &str, struct kevent &event) //а если неско
             }
             chatroom b(chanNameLast, "");
             rooms.push_back(b);
-            // for(vector<chatroom>::iterator it = rooms.begin(); it !=rooms.end(); it++)//потом удалить - проверка, какие комнаты добавлены 
-            // {
-            //     it->printName();
-            // }
-
+            string userToChan = addUserToChan(event);
+            if(rooms[rooms.size()-1].topic == "")
+                sendAnswer(event, ":server 331 "+userToChan+" "+chanNameLast+ " :No topic is set\r\n");
+            else
+                sendAnswer(event, ":server 332 "+userToChan+" "+chanNameLast+" :"+rooms[rooms.size()-1].topic+ "\r\n");//что тут тоже надо было проверить??
             size_t l = 0;//добавить добавление паролей - добавлено
             size_t m = 0;
             while (l < passName.size())//проверка и добавление паролей
@@ -330,8 +453,10 @@ void Server::cmdJOIN(string &str, struct kevent &event) //а если неско
             {
                 it->printName();
                 it->printPass();
+                for(list<string>::iterator iterat = it->users.begin(); iterat != it->users.end(); iterat++)
+                    cout << *iterat << endl;
                 cout << "1" << endl;
-            }
+            }   
         }
         else
            sendAnswer(event, ":server 403 :No such channel\r\n");
